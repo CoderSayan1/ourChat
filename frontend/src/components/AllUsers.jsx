@@ -1,7 +1,7 @@
 import React from "react";
 import ProfileColor from "./ProfileColor";
 
-function AllUsers({id, name, onClick, selected, online}) {
+function AllUsers({id, name, onClick, selected}) {
   return (
     <div
       key={id}
@@ -11,8 +11,8 @@ function AllUsers({id, name, onClick, selected, online}) {
         (selected ? "bg-green-500" : "")
       }
     >
-      <ProfileColor name={name} userId={id} online={online} />
-      <span>{name}</span>
+      {(id && name) ? ( <ProfileColor name={name} userId={id}/>) : <RegisterAndLogin /> }
+      <span className="capitalize">{name}</span>
     </div>
   );
 }

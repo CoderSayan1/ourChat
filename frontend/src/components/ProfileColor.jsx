@@ -1,6 +1,7 @@
 import React from "react";
+import RegisterAndLogin from "./RegisterAndLogin";
 
-function ProfileColor({ userId, name, online }) {
+function ProfileColor({ userId, name }) {
   const colors = [
     "bg-red-400",
     "bg-yellow-200",
@@ -10,20 +11,20 @@ function ProfileColor({ userId, name, online }) {
     "bg-purple-200",
     "bg-pink-200",
   ];
+
+  if (!userId || !name) {
+    return <RegisterAndLogin />; // Return nothing if userId or name is not provided
+  }
+
   const userIdBase10 = parseInt(userId, 16);
   const colorIndex = userIdBase10 % colors.length;
   const color = colors[colorIndex];
   // console.log(color);
   return (
     <div className={`w-8 h-8 relative rounded-full flex items-center ${color}`}>
-      <div className="text-center w-full text-black font-semibold">
+      <div className="text-center w-full text-black font-semibold uppercase">
         {name[0]}
       </div>
-      {online === true ? (
-        <div className="absolute bg-green-600 w-3 h-3 right-0 bottom-0 rounded-full"></div>
-      ) : (
-        <div className="absolute w-3 h-3 bg-gray-400 bottom-0 right-0 rounded-full border border-white"></div>
-      )}
     </div>
   );
 }

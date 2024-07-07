@@ -4,6 +4,8 @@ import { uniqBy } from "lodash";
 import axios from "axios";
 import { serverUrl } from "../constants/Constant";
 import AllUsers from "./AllUsers";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function ChatBox() {
   const [ws, setWs] = useState(null);
@@ -14,6 +16,7 @@ function ChatBox() {
   const [messages, setMessages] = useState([]);
 
   const autoMessageScrolling = useRef();
+  const textareaRef = useRef(null);
 
   const { name, id, setId, setName } = useContext(UserContext);
 
@@ -29,10 +32,19 @@ function ChatBox() {
     });
   };
 
+  // for textarea box
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "2px";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [newMessage]);
+
   useEffect(() => {
     connectToWS();
-  }, []);
+  }, [selectedUser]);
 
+  // for message scrolling automatically
   useEffect(() => {
     const autoScroll = autoMessageScrolling.current;
     if (autoScroll) {
@@ -97,7 +109,7 @@ function ChatBox() {
     setOnlinePeople(people);
   };
 
-  const handleSendMessage = (e, file = null) => {
+  const handleSendMessage = async (e, file = null) => {
     if (e) e.preventDefault();
     // console.log("Sending");
     ws.send(
@@ -111,13 +123,19 @@ function ChatBox() {
     );
 
     if (file) {
-      axios
-        .get(`${serverUrl}/v1/users/messages/${selectedUser}`)
-        .then((res) => {
-          setMessages(res.data);
-        });
+      try {
+        const res = await axios.get(
+          `${serverUrl}/v1/users/messages/${selectedUser}`
+        );
+        setMessages(res.data);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
     } else {
       setNewMessage("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "2px";
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -142,11 +160,20 @@ function ChatBox() {
     };
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent newline insertion
+      handleSendMessage();
+    }
+  };
+
+
   const handleLogout = () => {
     axios.post(`${serverUrl}/v1/users/logout`).then(() => {
       setWs(null);
       setId(null);
       setName(null);
+      toast.success("Logout Successfully!");
     });
   };
 
@@ -185,7 +212,6 @@ function ChatBox() {
               name={onlineUserExYou[userId]}
               onClick={() => setSelectedUser(userId)}
               selected={userId === selectedUser}
-              online={true}
             />
           ))}
           {Object.keys(offlinePeople).map((userId) => (
@@ -195,7 +221,6 @@ function ChatBox() {
               name={offlinePeople[userId].name}
               onClick={() => setSelectedUser(userId)}
               selected={userId === selectedUser}
-              online={false}
             />
           ))}
         </div>
@@ -226,12 +251,12 @@ function ChatBox() {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
-              class="size-6"
+              className="size-6"
             >
               <path
-                fill-rule="evenodd"
+                fillRule="evenodd"
                 d="M7.5 3.75A1.5 1.5 0 0 0 6 5.25v13.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V15a.75.75 0 0 1 1.5 0v3.75a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V5.25a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3V9A.75.75 0 0 1 15 9V5.25a1.5 1.5 0 0 0-1.5-1.5h-6Zm10.72 4.72a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1 0 1.06l-3 3a.75.75 0 1 1-1.06-1.06l1.72-1.72H9a.75.75 0 0 1 0-1.5h10.94l-1.72-1.72a.75.75 0 0 1 0-1.06Z"
-                clip-rule="evenodd"
+                clipRule="evenodd"
               />
             </svg>
           </button>
@@ -249,7 +274,7 @@ function ChatBox() {
           )}
           {!!selectedUser && (
             <div className="relative h-full">
-              <div className="overflow-y-scroll absolute top-0 left-0 right-0 bottom-2">
+              <div className="overflow-y-scroll scrollbar-thin scrollbar-webkit absolute top-0 left-0 right-0 bottom-2">
                 {messagesWithoutDuplicates.map((message) => (
                   <div
                     key={message._id}
@@ -258,11 +283,12 @@ function ChatBox() {
                     }`}
                   >
                     <div
-                      className={`text-left p-2 inline-block rounded-2xl my-[2px] max-w-[50%] ${
+                      className={`text-left p-2 inline-block rounded-2xl my-4 max-w-[50%] break-words ${
                         message.sender === id ? "bg-green-200" : "bg-blue-300"
                       }`}
                     >
                       {message.text}
+                      <p className="text-sm">{message.time}</p>
                       {message.file && (
                         <div>
                           <a
@@ -278,6 +304,7 @@ function ChatBox() {
                           </a>
                         </div>
                       )}
+                      {/* <p>{currentTime}</p> */}
                     </div>
                   </div>
                 ))}
@@ -292,20 +319,22 @@ function ChatBox() {
               className="flex items-center gap-x-2"
               onSubmit={handleSendMessage}
             >
-              <div className="relative flex items-center w-full">
-                <input
+              <div className="relative flex items-center w-full overflow-hidden max-h-48">
+                <textarea
+                  ref={textareaRef}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyPress}
                   type="text"
-                  className="flex-grow pl-4 pr-20 py-4 bg-white rounded-full outline-none text-gray-700 font-semibold text-lg border border-gray-300"
+                  className="flex-grow pl-4 pr-20 py-4 bg-white rounded-md outline-none text-gray-700 font-semibold text-lg border border-gray-300 resize-none overflow-y-scroll h-16 max-h-48 scrollbar-thin scrollbar-webkit"
                   placeholder="Type your message"
                 />
-                <label className="absolute right-4 px-4 py-2 text-black rounded-full text-sm font-semibold cursor-pointer">
+                <label className="absolute right-4 px-4 py-2 text-black text-sm font-semibold cursor-pointer">
                   <input
                     type="file"
                     name="file"
                     id="file"
-                    className="hidden"
+                    className="hidden h-16 max-h-48"
                     onChange={uploadFile}
                   />
                   <svg
@@ -324,7 +353,10 @@ function ChatBox() {
                   </svg>
                 </label>
               </div>
-              <button className="bg-green-500 p-4 rounded-full" type="submit">
+              <button
+                className="bg-green-500 p-4 rounded-md hover:bg-green-700"
+                type="submit"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"

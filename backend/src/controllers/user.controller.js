@@ -42,7 +42,7 @@ const registerUser = async (req, res) => {
     if (existedUser) {
       return res.send({
         status: 404,
-        message: "email already exists",
+        message: "Email already exists",
       });
     }
 
@@ -63,6 +63,7 @@ const registerUser = async (req, res) => {
           .status(201)
           .json({
             id: createNewUser._id,
+            status: 200,
             message: "Register Successfully",
           });
       }
@@ -97,10 +98,16 @@ const loginUser = async (req, res) => {
             .status(201)
             .json({
               id: user._id,
+              status: 200,
               message: "Login Successfully",
             });
         }
       );
+    } else{
+      return res.status(201).send({
+        status: 404,
+        message: "Password or email is incorrect",
+      });
     }
   } catch (error) {
     console.log("Login error", error);
@@ -111,7 +118,7 @@ const getProfile = (req, res) => {
   const token = req.cookies?.token;
   if (!token) {
     return res.status(201).send({
-      status: 401,
+      status: 404,
       message: "Please login to access this page",
     });
   }
@@ -120,7 +127,7 @@ const getProfile = (req, res) => {
     if (err) {
       console.log("Token verification error", err);
       return res.status(403).json({
-        status: 403,
+        status: 404,
         message: "Invalid token",
       });
     }
@@ -149,7 +156,7 @@ const allUsers = async (req, res) =>{
 }
 
 const logoutUser = (req, res) =>{
-  res.cookie("token", '', { sameSite: "none", secure: true }).json('ok');
+  res.cookie("token", '', { expires: new Date(0), sameSite: "none", secure: true }).json('ok');
 }
 
 export { checkApi, registerUser, getProfile, loginUser, messageOfUser, allUsers, logoutUser };

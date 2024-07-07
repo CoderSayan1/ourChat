@@ -18,25 +18,9 @@ export function setupWebSocket(server) {
         })
       );
     });
-  }
+  };
   wss.on("connection", (connection, req) => {
-
-    connection.isAlive = true;
-    connection.timer = setInterval(() => {
-      connection.ping();
-      connection.deathTimer = setTimeout(() =>{
-        connection.isAlive = false;
-        clearInterval(connection.timer);
-        connection.terminate();
-        notifyAboutOnlinePeople();
-        console.log('dead');
-      }, 1000);
-    }, 3000);
-
-    connection.on('pong', () =>{
-      clearTimeout(connection.deathTimer);
-    })
-
+    
     // console.log('Client connected');
     // connection.send('Hello Sayan');
     // console.log(req.headers);
@@ -63,47 +47,53 @@ export function setupWebSocket(server) {
     }
 
     connection.on("message", async (message) => {
-      // console.log(message); The message is in buffer form
-      const messsageData = JSON.parse(message.toString());
-    //   console.log(messsageData);
-      const { recipient, text, file } = messsageData.message;
-    //   console.log(recipient);
-    //   console.log(text);
-      let fileName = null;
-      if(file){
-        // console.log({file});
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = dirname(__filename);
-        const parts = file.name.split('.');
-        const extension = parts[parts.length - 1];
-        fileName = `${Date.now()}.${extension}`;
-        const path = `${__dirname}/../uploads/${fileName}`;
-        const bufferData = new Buffer(file.data.split(',')[1], 'base64');
-        fs.writeFile(path, bufferData, () =>{
-          console.log("file saved" + path);
-        })
-      }
-      if (recipient && (text || file)) {
-        const messageDoc = await MessageModel.create({
-            sender: connection.userId,
-            recipient,
-            text,
-            file: file ? fileName : null
-        });
-        [...wss.clients]
-          .filter((c) => c.userId === recipient)
-          .forEach((c) => c.send(JSON.stringify({ 
-            sender:connection.userId, 
-            recipient, 
-            _id: messageDoc._id, 
-            text,
-            file: file ? fileName : null 
-          })));
+     try {
+       // console.log(message); The message is in buffer form
+       const messsageData = JSON.parse(message.toString());
+     //   console.log(messsageData);
+       const { recipient, text, file } = messsageData.message;
+     //   console.log(recipient);
+     //   console.log(text);
+       let fileName = null;
+       if(file){
+         // console.log({file});
+         const __filename = fileURLToPath(import.meta.url);
+         const __dirname = dirname(__filename);
+         const parts = file.name.split('.');
+         const extension = parts[parts.length - 1];
+         fileName = `${Date.now()}.${extension}`;
+         const path = `${__dirname}/../uploads/${fileName}`;
+         const bufferData = Buffer.from(file.data.split(',')[1], 'base64');
+         fs.writeFile(path, bufferData, () =>{
+           console.log("file saved" + path);
+         })
+       }
+       if (recipient && (text || file)) {
+         const messageDoc = await MessageModel.create({
+             sender: connection.userId,
+             recipient,
+             text,
+             file: file ? fileName : null
+         });
+         [...wss.clients]
+           .filter((c) => c.userId === recipient)
+           .forEach((c) => c.send(JSON.stringify({ 
+             sender:connection.userId, 
+             recipient, 
+             _id: messageDoc._id, 
+             text,
+             file: file ? fileName : null 
+           })));
+       }
+      } catch (error) {
+        console.error('Message handling error:', error);
       }
     });
 
     // console.log([...wss.clients].map(c => c.name));
     // this is for online checking (Notify everyone about online people)
+
     notifyAboutOnlinePeople()
   });
+
 }

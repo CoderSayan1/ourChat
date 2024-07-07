@@ -2,6 +2,8 @@ import axios from "axios";
 import React, { useContext, useState } from "react";
 import { serverUrl } from "../constants/Constant";
 import { UserContext } from "../../context/UserContext";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function RegisterAndLogin() {
   const [name, setName] = useState("");
@@ -21,8 +23,18 @@ function RegisterAndLogin() {
         email,
         password,
       });
-      setLoggedInUserName(name);
-      setId(data.id);
+      if(!name || !email || !password){
+        toast.error("Please fill all the fields",);
+      } 
+      if(data.status === 404){
+        toast.error(data.message);
+      }
+      if(data.status === 200){
+        setLoggedInUserName(name);
+        setId(data.id);
+        toast.success(data.message);
+      }
+      
     } catch (error) {
       console.log("Data fetching error", error);
     }
@@ -70,17 +82,17 @@ function RegisterAndLogin() {
           {isLoginOrRegister === "register" && (
             <div>
               Already register?
-              <button onClick={() => setIsLogInOrRegister("login")}>
-                Login here
+              <button onClick={() => setIsLogInOrRegister("login")} className="mx-1 underline underline-offset-2 hover:text-blue-700">
+                Login
               </button>
             </div>
           )}
           {isLoginOrRegister === "login" && (
             <div>
               Don't have an account?
-              <button onClick={() => setIsLogInOrRegister("register")}>
+              <button onClick={() => setIsLogInOrRegister("register")} className="mx-1 underline underline-offset-2 hover:text-blue-700">
                 {" "}
-                Register here
+                Register now
               </button>
             </div>
           )}
